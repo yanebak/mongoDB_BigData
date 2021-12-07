@@ -1,0 +1,108 @@
+TP2
+Partie 1:
+
+Requêtes
+
+a) db.restaurants.find().pretty()
+b) db.restaurants.find({"borough":"Bronx"}).pretty()
+c) db.restaurants.find({"cuisine":"Italian"}).pretty()
+d) db.restaurants.find({"borough":"Manhattan","cuisine":"Irish"}).pretty()
+e) db.restaurants.find({$or:[{"borough":"Manhattan"},{"borough":"Bronx"}],"cuisine":"Irish"}).pretty()
+f) db.restaurants.find({$or:[{"cuisine":"Italian"},{"cuisine":"Irish"}]}).pretty()
+g) db.restaurants.find({"address.zipcode":"11225"}).pretty()
+h) db.restaurants.find({"address.coord":[-73.8786113, 40.8502883]).pretty()
+i) db.restaurants.find({"grades.grade":"B"}).pretty()
+j) db.restaurants.find({"grades.grade":"A"},{name:1}).pretty()
+k) db.restaurants.find({"grades.grade":"A"},{name:1,"grades.date":1,"grades.score":1}).pretty()
+l) db.restaurants.find({"grades.score":{$gte:25}},{name:1}).pretty()
+m) db.restaurants.find({"grades.score":{$gte:25}},{name:1}).sort({"name":1})
+n) db.restaurants.find({"grades.score":{$gte:6,$lte:10}},{name:1}).pretty()
+o) db.restaurants.find({"borough":"Bronx"}).count(), db.restaurants.count({"borough":"Bronx"})
+p) db.restaurants.find({"borough":"Bronx","cuisine":"Italian"}).count(), db.restaurants.count({"borough":"Bronx","cuisine":"Italian"})
+
+
+Partie 2:
+
+1)
+Approche par références:
+
+db.createCollections("etudiants")
+db.createCollections("enseignants")
+db.createCollections("cours")
+
+Etudiants
+db.etudiants.insert({_id:1, nom:"Dupont", prenom:"Bob", tel:"0600210000"})
+db.etudiants.insert({_id:2, nom:"Durand", prenom:"Paul"})
+db.etudiants.insert({_id:3, nom:"Dupont", prenom:"Toto" })
+
+Enseignants
+db.enseignants.insert({_id:1, nom:"Dupont", prenom:"Marie"})
+db.enseignants.insert({_id:2, nom:"Durand", prenom:"Barbara",tel:"06002101111"})
+db.enseignants.insert({_id:3, nom:"Dupont", prenom:"Titi"})
+
+Cours
+db.cours.insert({numC:"info-1", intitule:"Bases de données",discipline:"informatique", 
+                                    nbreH:"30", 
+                                    enseignants_id:1,
+                                    etudiants_id:[1,3]
+                })
+                
+db.cours.insert({numC:"math-1", discipline:"mathématiques", 
+                                    nbreH:"40", 
+                                    enseignants_id:2,
+                                    etudiants_id:[1,2]
+                })
+db.cours.insert({numC:"info-2", intitule:"Complexité",discipline:"informatique", 
+                                    nbreH:"30", 
+                                    enseignants_id:1,
+                                    etudiants_id:[1,3]
+                })
+
+
+Approche par documents imbriqués:
+
+db.createCollections("etudiants")
+db.createCollections("enseignants")
+db.createCollections("cours")
+
+Etudiants
+db.etudiants.insert({_id:1, nom:"Dupont", prenom:"Bob", tel:"0600210000"})
+db.etudiants.insert({_id:2, nom:"Durand", prenom:"Paul"})
+db.etudiants.insert({_id:3, nom:"Dupont", prenom:"Toto" })
+
+Enseignants
+db.enseignants.insert({_id:1, nom:"Dupont", prenom:"Marie"})
+db.enseignants.insert({_id:2, nom:"Durand", prenom:"Barbara",tel:"06002101111"})
+db.enseignants.insert({_id:3, nom:"Dupont", prenom:"Titi"})
+
+Cours
+db.cours.insert({numC:"info-1", intitule:"Bases de données",discipline:"informatique", 
+                                    nbreH:"30", 
+                                    resp:{nom:"Dupont", prenom:"Marie"},
+                                    etudiants:[{nom:"Dupont", prenom:"Bob"},{nom:"Dupont", prenom:"Toto"}]
+                })
+                
+db.cours.insert({numC:"math-1", discipline:"mathématiques", 
+                                    nbreH:"40", 
+                                    resp:{nom:"Durand", prenom:"Barbara"},
+                                    etudiants:[{nom:"Dupont", prenom:"Bob"},{nom:"Durand", prenom:"Paul"}]
+                })
+db.cours.insert({numC:"info-2", intitule:"Complexité",discipline:"informatique", 
+                                    nbreH:"30", 
+                                    resp:{nom:"Dupont", prenom:"Marie"},
+                                    etudiants:[{nom:"Dupont", prenom:"Bob"},{nom:"Dupont", prenom:"Toto"}]
+                })
+
+
+
+
+3)Requêtes
+    a) db.cours.find({},{discipline:1,intitule:1}).pretty()
+    b) db.etudiants.find({},{nom:1,prenom:1}).pretty()
+    c) db.enseignants.find({},{nom:1,prenom:1}).pretty()
+    d) db.cours.find({discipline:"informatique"},{"etudiants.nom":1,"etudiants.prenom":1}).pretty()
+    e) db.cours.find({"etudiants.nom":"Dupont","etudiants.prenom":"Toto"},{discipline:1,intitule:1}).pretty()
+    f) db.cours.find({"resp.nom":"Durand","resp.prenom":"Barbara"},{discipline:1,intitule:1}).pretty()
+    g) db.cours.find({"etudiants.nom":"Dupont","etudiants.prenom":"Bob"},{"resp.nom":1,"resp.prenom":1,discipline:1,intitule:1}).pretty()
+
+

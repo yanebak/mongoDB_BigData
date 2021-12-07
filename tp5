@@ -1,0 +1,12 @@
+mongodb-compass pour lancer Compass 
+{
+   $jsonSchema: {
+      required: ['borough','cuisine'], // the borough and cuisine field are required
+      properties: {
+      borough: {
+            bsonType: "string",
+            description: "must be a string"
+         },
+      }
+   }
+}

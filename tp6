@@ -1,0 +1,124 @@
+TP6
+
+Partie 1
+
+A- sudo docker network create my-mongo-cluster
+B- d
+
+5-
+6- 2 noeuds secondaires
+
+9- "lastHeartbeat" : ISODate("2021-10-08T15:14:14.662Z"),17h17
+    "lastHeartbeatRecv" : ISODate("2021-10-08T15:14:15.193Z"),
+
+11
+ a) Priority : permet de déterminer quel membre d'un jeu de réplicas est susceptible de devenir principal
+    Ici dans notre contexte, c'est mongo-lyon puique sa valeur est 1.
+    
+ b) ArbiterOnly:permet de choisir un arbitre
+    ici pour les deux membres , sa valeur est false.
+    
+ c) BuilIndexes:un booléen qui indique que les processus mongod indexent sur ce membre.
+    sa valeur est à true pour les deux membres.
+    
+ d) chainingAllowed:les membres secondaires du jeu de réplicas peuvent répliquer les données d'autres membres (true) ou du primaire (false). tout dépend de sa valeur
+    sa valeur est true
+ e) heartbeatIntervalMillis: La fréquence en millisecondes des heartbeats
+    sa valeur est 2000.
+ f) heartbeatTimeoutSecs: Nombre de secondes pendant lesquelles les membres du jeu de réplicas attendent un ping réussi les uns des autres.
+    sa valeur est 10
+
+12- db.isMaster
+    Pour mongo-aubiere on a is master est true et false pour mongo-lyon
+13- use MyDB
+    db.createCollection("movies")
+    db.movies.insertMany([{_id:17,titre:"Pulp Fiction", annee:1994,idReal:37},{_id:57,titre:"Jackie Brown", annee:1997,idReal:37}])
+14- Aucune réplication n'est effective sur mongo-lyon.
+
+15- rs.slaveOk()
+    On remarque qu'après avoir exécuté cette commande , la réplication est devenue visible , le noeud primaire s'est chargé de mettre à jour les infos du noeud secondaire.
+    
+16- rs.add("mongo-paris:27017")
+    1) réplication effectuée au niveau de mongo-paris après rs.slaveOk()
+    2) fait
+    3) rs.stepDown():Demande au principal du jeu de réplicas de devenir un secondaire . 
+        Après le retrait du primaire, les secondaires éligibles tiendront une élection pour le primaire
+         Le noeud mongo-lyon devient le noeud primaire et mongo-aubiere devient secondaire.
+
+Partie 3 : Panne du site primaire
+
+1-  use admin , before
+    db.shutdownServer()
+2-  Constat: L'ensemble de réplication myrs0 est consitué à présent deux noeuds : mongo-lyon(primaire) et aubiere.
+4- le serveur du site primaire étant arrêté brusquement , les autres noeuds de l'ensemble de réplication myrs0 ont fait un vote et un nouveau noeud qui a été vite désigné     primaire  ainis l'ordre fut vite rétabli deans l'ensemble de,réplication.
+3-  sudo docker start  mongo-aubiere , sudo docker exec -it mongo-aubiere /bin/bash
+4- Apès avoir rédémarré le serveur , le noeud mongo-aubiere est considéré comme un nooeud secondaire à présent pour ne  pas troubler l'équilibre du système. On conclut que la réplication gère la panne du site primaire de façon efficiente.
+
+Partie 4: Mise à jour et interrogation d'un système de réplication
+
+1-  db.createCollection("artists")
+    db.artists.insertMany([{_id:11,nom:"Travolta",prenom:"John"},{_id:37,nom:"Tarantino",prenom:"Quentin"},{_id:167,nom:"De Niro",prenom:"Robert"}]])
+    db.movies.aggregate([
+        {
+            $lookup:
+            {
+                from: "artists",
+                localField: "idReal",
+                foreignField: "_id",
+                as: "Movies_docs"
+            }
+        }
+        ])
+2-a) db.getCollection('movies').aggregate([
+        {
+            $lookup:
+            {
+                from: "artists",
+                localField: "idReal",
+                foreignField: "_id",
+                as: "Movies_docs"
+            }
+        }
+, {$project:{titre:1, "Movies_docs.nom":1,"Movies_docs.prenom":1,_id:0}}
+        ])
+        
+    b) db.movies.find({},{titre:1,_id:0})
+    c) db.getCollection('movies').aggregate([
+        {
+            $lookup:
+            {
+                from: "artists",
+                localField: "idReal",
+                foreignField: "_id",
+                as: "Movies_docs"
+            }
+        }
+, {$project:{titre:1, "annee":1,_id:0}} 
+        ]) 
+
+Partie 5: Panne du réseau
+
+1) source: 29e2b15315f6:27017
+        syncedTo: Fri Oct 15 2021 20:24:56 GMT+0000 (UTC)
+        -10 secs (0 hrs) behind the primary 
+    source: mongo-paris:27017
+        syncedTo: Fri Oct 15 2021 20:24:46 GMT+0000 (UTC)
+        0 secs (0 hrs) behind the primary
+2) fait 
+    sudo docker network disconnect my-mongo-cluster mongo-lyon
+    mongo-lyon n'est plus un noeud dans l'ensemble de réplications.
+    
+3) db.movies.insert({comment:"Insertion après la panne du réseau"})
+4) au niveau de mongo-aubiere qui est devenu le nouveau noeud primaire et de mongo-paris ,on a juste l'ajout d'un nouveau élément inséré plus les deux autres documents qui étaient présents après la panne 
+    au niveau de mongo-lyon là ou la panne est survenue,on a rien 
+5)  le décalage de synchronisation diffère généralement dans tous les sites.
+6) sudo docker network connect my-mongo-cluster mongo-lyon
+7) On a une erreur et ce site n'arrive plus à se synchroniser avec le site primaire.
+
+Partie 6: Modification de la configuration d'une réplication
+
+1) fait
+2) fait
+3)db.movies.find().readPref("secondary",[{"dc":"east","usage":"production"}])
+
+    

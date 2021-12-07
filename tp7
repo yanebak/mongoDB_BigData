@@ -1,0 +1,172 @@
+PARTIE 1
+
+1)
+sudo docker run --name mongo-aubiere1 -p 30000:27017 --network my-mongo-cluster mongo mongod --replSet rs-1 --shardsvr -port 27017&
+docker run --name mongo-aubiere2 -p 30002:27017 --network my-mongo-cluster mongo mongod --replSet rs-2 --shardsvr -port 27017&
+docker run --name mongo-lyon1 -p 30001:27017 --network my-mongo-cluster mongo mongod --replSet rs-1 --shardsvr -port 27017&1
+docker run --name mongo-lyon2 -p 30003:27017 --network my-mongo-cluster mongo mongod --replSet rs-2 --shardsvr -port 27017&
+2) fait
+3) sudo docker run --name my-confserver1 -p 30004:27017 --network my-mongo-cluster mongo mongod --replSet myrs-conf --configsvr -port 27017&
+    sudo docker run --name my-confserver2 -p 30005:27017 --network my-mongo-cluster mongo mongod --replSet myrs-conf --configsvr -port 27017&
+4) sudo docker run --name my-router -p 30006:27017 --network my-mongo-cluster mongo mongos --configdb myrs-conf/my-confserver1:27017,myconfserver2:27017 &
+5)  statut actuel de mon sharded actuel:
+--- Sharding Status --- 
+  sharding version: {
+        "_id" : 1,
+        "minCompatibleVersion" : 5,
+        "currentVersion" : 6,
+        "clusterId" : ObjectId("6164ab9a5f5ebc89daa32545")
+  }
+  shards:
+  active mongoses:
+  autosplit:
+        Currently enabled: yes
+  balancer:
+        Currently enabled: yes
+        Currently running: no
+        Failed balancer rounds in last 5 attempts: 0
+        Migration results for the last 24 hours: 
+                No recent migrations
+  databases:
+        {  "_id" : "config",  "primary" : "config",  "partitioned" : true }
+
+6) Ajout des shards
+nom:mongo-aubiere1 ec2a0351f1ff:27017
+mpongo-aubiere2 : 65d7c4b93de7:27017
+7) --- Sharding Status --- 
+  --- Sharding Status --- 
+  sharding version: {
+        "_id" : 1,
+        "minCompatibleVersion" : 5,
+        "currentVersion" : 6,
+        "clusterId" : ObjectId("61659afca5c6fbd507c3d642")
+  }
+  shards:
+        {  "_id" : "rs-1",  "host" : "rs-1/ec2a0351f1ff:27017,mongo-lyon1:27017",  "state" : 1,  "topologyTime" : Timestamp(1634049442, 1) }
+        {  "_id" : "rs-2",  "host" : "rs-2/65d7c4b93de7:27017,mongo-lyon2:27017",  "state" : 1,  "topologyTime" : Timestamp(1634049428, 2) }
+  active mongoses:
+        "5.0.3" : 1
+  autosplit:
+        Currently enabled: yes
+  balancer:
+        Currently enabled: yes
+        Currently running: no
+        Failed balancer rounds in last 5 attempts: 0
+        Migration results for the last 24 hours: 
+                No recent migrations
+  databases:
+        {  "_id" : "config",  "primary" : "config",  "partitioned" : true }
+8)
+    a) 
+        les bases de données hébergées au niveau du serveur de configuration:
+        admin   0.000GB
+        config  0.002GB
+        local   0.001GB
+
+    b) use config , show collections
+    
+        actionlog
+        changelog
+        chunks
+        collections
+        lockpings
+        locks
+        migrations
+        mongos
+        reshardingOperations
+        shards
+        system.indexBuilds
+        tags
+        transactions
+        version
+
+    c) db.mongos.find()
+        { "_id" : "20b3b69f89e3:27017": ceci est l'adresse du routeur, 
+            "advisoryHostFQDNs" : [ ], "mongoVersion" : "5.0.3", "ping" : ISODate("2021-10-12T14:56:51.989Z"), "up" : NumberLong(2093), "waiting" : true }
+    d) db.shards.find()
+        { "_id" : "rs-2", "host" : "rs-2/65d7c4b93de7:27017,mongo-lyon2:27017", "state" : 1, "topologyTime" : Timestamp(1634049428, 2) }
+        { "_id" : "rs-1", "host" : "rs-1/ec2a0351f1ff:27017,mongo-lyon1:27017", "state" : 1, "topologyTime" : Timestamp(1634049442, 1) }
+    e)  db.chunks.find()
+            il y en a 1024
+    
+    
+    
+    PARTIE 2
+    
+    1) sh.enableSharding("testdb")
+    2) le shard principal est : "primary" : "rs-2"
+    3) sh.shardCollection("testdb.books",{code:"hashed"})
+    4) Vérification 
+        on se connecte à mongo-aubiere1
+        sudo docker exec -it mongo-aubiere /bin/bash 
+        use testdb
+        show collections
+    5) use testdb
+        for (i=1; i<100000; i++) {db.books.insert({code:i})}
+        
+    6)db.books.getShardDistribution() en cours 
+            Shard rs-1 at rs-1/ec2a0351f1ff:27017,mongo-lyon1:27017
+            data : 32KiB docs : 928 chunks : 2
+            estimated data per chunk : 16KiB
+            estimated docs per chunk : 464
+
+            Shard rs-2 at rs-2/65d7c4b93de7:27017,mongo-lyon2:27017
+            data : 35KiB docs : 1019 chunks : 2
+            estimated data per chunk : 17KiB
+            estimated docs per chunk : 509
+
+            Totals
+            data : 68KiB docs : 1947 chunks : 4
+            Shard rs-1 contains 47.66% data, 47.66% docs in cluster, avg obj size on shard : 36B
+            Shard rs-2 contains 52.33% data, 52.33% docs in cluster, avg obj size on shard : 36B
+            
+    7) Les documents sont répartis de sorte que la distribution des fragments soit équilibrée
+    
+    8) Plan de requête : db.books.explain("executionStats").find()
+        a-shards interrogés: "shardName" : "rs-1",shardName" : "rs-2"
+        b-plan de requête exécuté à chaque shard:  COLLSCAN
+        c-temps de traitement: temps shard1: 243 ; temps shard2: 255
+        d-nombre de documents envoyés par chaque shard: shard1:50393 ; shard2:49606 .
+    
+    9) db.books.explain("executionStats").find({code:1})
+        a- shard utilisé : rs2
+        b-plan de requête exécuté:  XSCAN
+        c- temps d'exécution : 1ms
+        d-nombre de documents retournés et de clés examinées : 1 
+    
+    
+    10) sh.shardCollection("testdb.clients", {country:1,code:1})
+        
+    
+    11) sh.addShardTag("rs-1","EU")
+        sh.addShardTag("rs-2,"AM")
+    
+    12)sh.addTagRange("testdb.clients",{country:"fr",code:Minkey},{country:"fr",code:Maxkey},"EU"}
+    
+    13) a-for (i=0; i<1000; i++) {db.clients.insert({code:i, country:"fr"})}
+        b-for (i=0; i<1000; i++) {db.clients.insert({code:i, country:"es"})}
+        c-for (i=0; i<500; i++) {db.clients.insert({code:i, country:"usa"})}
+        d-for (i=0; i<500; i++) {db.clients.insert({code:i, country:"can"})}
+    14) 
+        db.clients.getShardDistribution()
+                    
+            Shard rs-1 at rs-1/ec2a0351f1ff:27017,mongo-lyon1:27017
+            data : 50KiB docs : 1000 chunks : 1
+            estimated data per chunk : 50KiB
+            estimated docs per chunk : 1000
+
+            Shard rs-2 at rs-2/65d7c4b93de7:27017,mongo-lyon2:27017
+            data : 102KiB docs : 2000 chunks : 2
+            estimated data per chunk : 51KiB
+            estimated docs per chunk : 1000
+
+            Totals
+            data : 153KiB docs : 3000 chunks : 3
+            Shard rs-1 contains 33.12% data, 33.33% docs in cluster, avg obj size on shard : 52B
+            Shard rs-2 contains 66.87% data, 66.66% docs in cluster, avg obj size on shard : 52B
+
+    15) Compter le nombre de documents clients
+        a) router : db.clients.count() 3000
+        b) site primaire rs-1 : db.clients.count() 1000
+        c) site primaire rs-2 : db.clients.count() 2000
+    

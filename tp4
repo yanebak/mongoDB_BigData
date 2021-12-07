@@ -1,0 +1,122 @@
+TP4
+
+Partie 1
+
+Q1:db.restaurants.explain("executionStats").find()
+    a) le plan qui a été exécuté: COLLSCAN
+    b) le temps d'exécution : 54 ms
+    c) Le nombre de documents renvoyés en réponse :25359
+    d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 0(clés)
+    e) Les plans candidats qui n'ont pas été retenus : rejectedPlans" : [ ]
+
+Q2:db.restaurants.explain("executionStats").find({"borough":"Bronx"},{name:1})
+    a) le plan qui a été exécuté: COLLSCAN
+    b) le temps d'exécution : 24 ms
+    c) Le nombre de documents renvoyés en réponse : 2338
+    d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 0(clés)
+    e) Les plans candidats qui n'ont pas été retenus : rejectedPlans" : [ ]
+    
+Q3:db.restaurants.explain("executionStats").find({"grades.score":{$gte:6,$lte:10}},{name:1})
+    a) le plan qui a été exécuté: COLLSCAN
+    b) le temps d'exécution : 49 ms
+    c) Le nombre de documents renvoyés en réponse :19820
+    d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 0(clés)
+    e) Les plans candidats qui n'ont pas été retenus : rejectedPlans" : [ ]
+Q4:db.restaurants.explain("executionStats").find({"borough":"Bronx","grades.score":{$gte:4,$lte:10}},{name:1})
+    a) le plan qui a été exécuté: COLLSCAN
+    b) le temps d'exécution : 25 ms
+    c) Le nombre de documents renvoyés en réponse :1919
+    d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 0(clés)
+    e) Les plans candidats qui n'ont pas été retenus : rejectedPlans" : [ ]
+    
+Q5: db.restaurants.explain("executionStats").find({"address.coord.0":{$gte:-80},"address.coord.1":{$lte:45}},{name:1})
+    a) le plan qui a été exécuté: COLLSCAN
+    b) le temps d'exécution : 37 ms
+    c) Le nombre de documents renvoyés en réponse :25178
+    d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 0(clés)
+    e) Les plans candidats qui n'ont pas été retenus : rejectedPlans" : [ ]
+    
+    
+
+Partie 2: Indexation
+
+1) db.restaurants.createIndex({"grades.score":1})
+2) Sur les requêtes Q1,Q2,Q5, les plans de requêtes sont restées inchangées,tout est resté normal
+    Au niveau de Q3, on a plutôt utilisé l'index du score:
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 124 ms
+        c) Le nombre de documents renvoyés en réponse :19820
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 23373, 67780(clés)
+        e) Plusieurs plans candidats qui n'ont pas été retenus.
+     Au niveau de Q4,
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 124 ms
+        c) Le nombre de documents renvoyés en réponse :1919
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 23963, 74171(clés),
+ A ces deux niveaux , n utilisant notre indexation , les stats de la recherche ont été vraiment rapides. 
+3) db.restaurants.createIndex({"name":1,"borough":1})
+4) db.restaurants.createIndex({"name":1})
+5) Impact des Indexation
+    Aucun impact réel sur Q1, Q5
+    Avec l'indexation, la requête n'a plus besoin de scanner toute la collection, seules quelques clés
+    ont été examinées.La recherche a été fortement accélérée et on a gagné en temps.
+    
+6)db.restaurants.explain("executionStats").find({"borough":"Bronx"}).hint({name:1})
+    On recense les informations suivantes:
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 46 ms
+        c) Le nombre de documents renvoyés en réponse :2338
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 25359, 25359(clés),
+    En utilisant l'attribut name dans le plan d'exécution de Q2,on a un gain considérable de temps et toute la collection 
+    est parcourue bien qu'on ait utilisé une clé name
+
+7) db.restaurants.getIndexes()
+8) db.restaurants.dropIndexes()
+    Stratégie d'indexation propre:
+        db.restaurants.createIndex({"name":1,"borough":1})
+        db.restaurants.createIndex({"name":1})
+        db.restaurants.createIndex({"borough":1})
+9)
+
+Partie 3 : Recherche textuelle
+1) db.restaurants.createIndex({name:"text"})
+   db.restaurants.find({$text:{$search:"Kitchen",$caseSensitive:true}}).pretty()
+   
+2) db.restaurants.find({$text:{$search:"Kitchen -Street",$caseSensitive:true}}).pretty()
+3) db.restaurants.find({$text:{$search:"Deli Cafe Bagels",$caseSensitive:true}}).pretty()
+4) db.restaurants.find({$text:{$search:"\"Hot Bagel\""}}).pretty()
+
+5) db.restaurants.find({$text:{$search:"Kitchen",$caseSensitive:true}}).explain("executionStats")
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 3 ms
+        c) Le nombre de documents renvoyés en réponse :502
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 502, 502(clés)
+        
+    db.restaurants.find({$text:{$search:"\"Hot Bagel\""}}).explain("executionStats")
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 2 ms
+        c) Le nombre de documents renvoyés en réponse :17
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 305, 325(clés)
+        
+    db.restaurants.find({$text:{$search:"Deli Cafe Bagels",$caseSensitive:true}}).explain("executionStats")
+        a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 20 ms
+        c) Le nombre de documents renvoyés en réponse :2134
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 2136, 2195(clés)
+        
+     db.restaurants.find({$text:{$search:"Kitchen - Street",$caseSensitive:true}}).explain("executionStats")   
+       a) le plan qui a été exécuté: IXCAN
+        b) le temps d'exécution : 6 ms
+        c) Le nombre de documents renvoyés en réponse :589
+        d) Le nombre de documents et de clés examinés lors  de l'exécution de la requête : 585, 592(clés)
+    On remarque que ces statistiques indiquent que la recherche textuelle est vraiment efficiente , souvent 
+    le nombre de clés examinés est presque égal au nombre de documents examinés.Ceci justifie de la rapidité 
+    dans l'exécution et du temps d'exécution assez petit.Ce plan d'exécution utilisant les index textes est optimale 
+    et favorise une recherche accélérée.
+    
+6)  db.restaurants.dropIndexes()
+    db.restaurants.createIndex({name:"text",cuisine:"text",borough:"text"})
+    db.restaurants.find({$text:{$search:"Ice Queen Bagels",$caseSensitive:true}}).pretty()
+    
+7)  db.restaurants.dropIndexes()
+    db.restaurants.createIndex({name:"text",cuisine:"text",borough:"text"},{weights:{name:10,cuisine:5}})

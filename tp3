@@ -1,0 +1,64 @@
+Exercice 1
+
+ db.films.insert({"title":"TRuth or Dare","year":2000,"genre":"Action","country":"USA","director":{"last_name":"Tarantino","first_name":"Tarantino","birth_date":"1963"},actors:[{"last_name":"Travolta","first_name":"John","birth_date":"1954","role":"Vincent Vega"},{"last_name":"Willis","first_name":"Bruce","birth_date":"1955","role":"Butch colligde"},{"last_name":"Tarantino","first_name":"Quentin","birth_date":"1963","role":"Jimmy Dimmick"},{"last_name":"TraQ","first_name":"Jo","birth_date":"1954","role":"Vincent Veplga"}]})
+ 
+ db.films.insert({"title":"TRut","year":2001,"genre":"Action","country":"USA","director":{"last_name":"Tarantino","first_name":"Tarantino","birth_date":"1963"},actors:[{"last_name":"Travolta","first_name":"John","birth_date":"1954","role":"Vincent Vega"},{"last_name":"Willis","first_name":"Bruce","birth_date":"1955","role":"Butch colligde"},{"last_name":"Tarantino","first_name":"Quentin","birth_date":"1963","role":"Jimmy Dimmick"},{"last_name":"TraQ","first_name":"Jo","birth_date":"1954","role":"Vincent Veplga"}]})
+ db.films.insert({"title":"TRut","year":2001,"genre":"Action","country":"USA","director":{"last_name":"Rayane","first_name":"Bak","birth_date":"1963"},actors:[{"last_name":"Travolta","first_name":"John","birth_date":"1954","role":"Vincent Vega"},{"last_name":"Willis","first_name":"Bruce","birth_date":"1955","role":"Butch colligde"},{"last_name":"Tarantino","first_name":"Quentin","birth_date":"1963","role":"Jimmy Dimmick"},{"last_name":"TraQ","first_name":"Jo","birth_date":"1954","role":"Vincent Veplga"}]})
+ 
+ db.films.insert({"title":"TRut","year":2001,"genre":"Action","country":"USA","director":{"last_name":"Ray","first_name":"Bak","birth_date":"1963"},actors:[{"last_name":"Travolta","first_name":"John","birth_date":"1954","role":"Vincent Vega"},{"last_name":"Willis","first_name":"Bruce","birth_date":"1955","role":"Butch colligde"},{"last_name":"Tarantino","first_name":"Quentin","birth_date":"1963","role":"Jimmy Dimmick"},{"last_name":"TraQ","first_name":"Jo","birth_date":"1954","role":"Vincent Veplga"}]})
+ 
+ 
+ 
+ 
+db.auteurs.insert({nom:"Victor Hugo",age:45,romans:["Notre-Dame de Paris","Les misérables","Quatrevingt-treize"],poesies:[{annee:1822,titre: "Odes et poésies diverses"},{annee:1825,titre: "Nouvelles Odes"},{annee:1828,titre: "Odes et ballades"},{annee:1834,titre: "Claudes Gueux"}]})
+
+db.auteurs.insert({nom:"Ernest Miller Hemingway",romans:["The Torrents of Spring","The sun Also Rises","A Farewell to Arms"]})
+
+db.auteurs.insert({nom:"Gabriel Garcia Marquez", romans:["El coronel no tiene quien le escriba","Cronica de una muerte anunciada","Cien anos de soledad"],nouvelles:[{annee:1962,titre: "Los funerales de la Mama Grande"},{annee:1962,titre: "Ojos de perro azul"}]})
+
+db.auteurs.insert({nom:"T1",statut:"Test",romans:["RT1","RT2"],poesies:[{annee:21,titre: "PT1"},{annee:22,titre: "PT2"}]})
+
+db.auteurs.insert({nom:"T2",statut:"Test",romans:["RS1","RS2"],poesies:[{annee:21,titre: "PS1"},{annee:22,titre: "PS2"}]})
+
+db.auteurs.insert({nom:"T3",statut:"Test",romans:["R1","R2"],poesies:[{annee:21,titre: "P1"},{annee:22,titre: "P2"}]})
+
+
+1) db.auteurs.update({"nom":"Victor Hugo"},{$set:{age:46}})
+2) db.auteurs.update({nom:"Ernest Miller Hemingway"},{$set: {age:56}})
+3) db.auteurs.update({nom:"Victor Hugo"},{$set: {age:45,pays:"FR"}})
+4) db.auteurs.update({nom:"Ernest Miller Hemingway"},{$set: {nouvelles:[{annee:1932,titre: "Up in Michigan"},{annee:1923,titre: "Out of Season"},{annee:1924,titre: "Indian Camp"},{annee:1924,titre: "The Revolutionnist"}]}})
+5) db.auteurs.update({"nom":"Ernest Miller Hemingway","nouvelles.titre":"Up in Michigan"},{$set: {"nouvelles.$.annee":1923}})
+6) db.auteurs.update({"nom":"Ernest Miller Hemingway","nom":"Victor Hugo"},{$rename: {"nom":"name","pays":"country"}}), en deux actions
+7) db.auteurs.update({"name":"Victor Hugo"},{$unset: {age:1,country:1}})
+8) db.auteurs.remove({"nom":"T1"})
+9) db.auteurs.remove({"statut":"Test"})
+10) db.auteurs.insert({nom:"T4",statut:"Test",romans:["RT4","RT5"],poesies:[{annee:21,titre: "PT4"},{annee:22,titre: "PT5"}]})
+11) db.auteurs.replaceOne({nom:"T4"},{nom:"T5",statut:"Test",romans:["RT6","RT7"],poesies:[{annee:21,titre: "PT4"},{annee:22,titre: "PT5"}]})
+12) db.auteurs.updateMany({},{$currentDate:{lastModified: true,}})
+13) db.auteurs.update({"name":"Victor Hugo","poesies.titre":"Nouvelles Odes"},{$set:{"poesies.$.annee":1824}}) 
+
+
+Exercice 2
+
+1) db.auteurs.remove({})
+
+2)  db.auteurs.updateOne({romans:"RT1"},{$set:{"romans.$":"RS2"}})
+    *Avec cette requête,on a modifié le premier nom roman qui est égal à rt1
+    db.auteurs.updateOne({"poesies.annee":21},{$set:{"poesies.$.titre":"PTT1"}})
+    *Avec cette requête, on a modifié quand la poésie a pour  année = 21, on a changé le titre du premier élément qui correspond 
+    
+    *Avec cette requête, on a modifié quand la poésie a pour  année = 21, on a changé le titre du premier élément qui correspond 
+    db.auteurs.updateMany({"poesies.annee":21},{$set:{"poesies.$.titre":"PTT23"}})
+    *modifie tous les docs qui ont pour année 21, et change cela PTT23
+    db.auteurs.updateMany({"poesies.annee":21},{$set:{"poesies.$[].titre":"PTT24"}})
+    *change tous les titres en PTT24 qui ont année  21 dans leur document
+    *aucun changement
+    *agit et change uniquement le titre des poésies qui ont pour année 21
+    *ajoute la valeur 100 au tableau roman puisqu'elle n'existait pas
+3) db.auteurs.update({"nom":"Victor Hugo"},{$addToSet:{"romans":"Les Travailleurs de la mer"}})
+4)  db.auteurs.update({"nom":"Victor Hugo"},{$addToSet:{"romans":"Claude Gueux"}})
+    db.auteurs.update({"nom":"Victor Hugo"},{$pull:{"poesies":"Claude Gueux"}})
+5) db.auteurs.update( {nom:"Ernest Miller Hemingway"}, { $pop: { romans : 1 } } )
+6) db.auteurs.update( {nom:"Victor Hugo"}, { $pop: { poesies : -1 } } )
+7) db.auteurs.update( {statut:"Test"}, { $pull: { "poesies.annee" : 21 } } )
+8) db.auteurs.update({"nom":"Victor Hugo"},{$addToSet:{"poesies": {annee:1856,titre:"Les contemplations"}}})
